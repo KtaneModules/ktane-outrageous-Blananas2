@@ -97,6 +97,8 @@ public class outrageousScript : MonoBehaviour {
     }
 
     void GeneratePuzzle () {
+        ciphertext = "";
+
         chosenOrientation = UnityEngine.Random.Range(0, grids.Count());
         chosenWord = UnityEngine.Random.Range(0, words.Count());
         finalGrid = grids[chosenOrientation];
@@ -115,6 +117,7 @@ public class outrageousScript : MonoBehaviour {
         Debug.LogFormat("[Outrageous #{0}] Filled in 6x6 grid: {1}", moduleId, finalGrid);
 
         indicators = Bomb.GetIndicators().Join("");
+        X = 0;
         for (int j = 0; j < indicators.Length; j++) {
             X = (X + (base36.IndexOf(indicators[j]) - 9)) % 36;
         }
@@ -124,6 +127,7 @@ public class outrageousScript : MonoBehaviour {
         }
         Debug.LogFormat("[Outrageous #{0}] Modifying the X value gives us {1}.", moduleId, X);
 
+        initialCipherSequence = "";
         serialNumber = Bomb.GetSerialNumber();
         for (int k = 0; k < 36; k++) {
             currentChar = serialNumber[k % 6].ToString();
@@ -213,61 +217,71 @@ public class outrageousScript : MonoBehaviour {
     }
 
     void PressStart() {
+        GetComponent<KMAudio>().PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, transform);
         inSubmissionMode = true;
         DefaultMode.SetActive(false);
         SubmissionMode.SetActive(true);
         StartCoroutine(Submission());
     }
 
+    void GiveStrike() {
+        StopCoroutine(Submission());
+        numberOfInputs = 0;
+        numberOfDigits = 0;
+        numberOfDirections = 0;
+        GetComponent<KMBombModule>().HandleStrike();
+        inSubmissionMode = false;
+        DefaultMode.SetActive(true);
+        SubmissionMode.SetActive(false);
+        GeneratePuzzle();
+    }
+
     private IEnumerator Submission() {
         if (inSubmissionMode) {
             yield return new WaitForSeconds(5.0f); //1st flash
-            correctDirection = UnityEngine.Random.Range(0, 4) + 1;
-            LEDObject.GetComponent<MeshRenderer>().material = LEDColors[correctDirection];
-            Debug.LogFormat("[Outrageous #{0}] The color for the 1st flash is {1}", moduleId, loggingColors[correctDirection - 1]);
-            yield return new WaitForSeconds(0.25f);
-            LEDObject.GetComponent<MeshRenderer>().material = LEDColors[0];
-            yield return new WaitForSeconds(4.75f); //2nd flash
-            if (numberOfDirections != 1) {
-                GetComponent<KMBombModule>().HandleStrike();
-                inSubmissionMode = false;
-                DefaultMode.SetActive(true);
-                SubmissionMode.SetActive(false);
-                Debug.LogFormat("[Outrageous #{0}] You didn't press the 1st direction in time, strike! Generating new puzzle...", moduleId);
-                //GeneratePuzzle();
-            } else {
+            if (inSubmissionMode) {
                 correctDirection = UnityEngine.Random.Range(0, 4) + 1;
                 LEDObject.GetComponent<MeshRenderer>().material = LEDColors[correctDirection];
-                Debug.LogFormat("[Outrageous #{0}] The color for the 2nd flash is {1}", moduleId, loggingColors[correctDirection - 1]);
+                Debug.LogFormat("[Outrageous #{0}] The color for the 1st flash is {1}", moduleId, loggingColors[correctDirection - 1]);
+                yield return new WaitForSeconds(0.25f);
+                LEDObject.GetComponent<MeshRenderer>().material = LEDColors[0];
+                yield return new WaitForSeconds(4.75f); //2nd flash
+                if (inSubmissionMode) {
+                    if (numberOfDirections != 1) {
+                        Debug.LogFormat("[Outrageous #{0}] You didn't press the 1st direction in time, strike! Generating new puzzle...", moduleId);
+                        GiveStrike();
+                    } else {
+                        correctDirection = UnityEngine.Random.Range(0, 4) + 1;
+                        LEDObject.GetComponent<MeshRenderer>().material = LEDColors[correctDirection];
+                        Debug.LogFormat("[Outrageous #{0}] The color for the 2nd flash is {1}", moduleId, loggingColors[correctDirection - 1]);
+                    }
+                    yield return new WaitForSeconds(0.25f);
+                    LEDObject.GetComponent<MeshRenderer>().material = LEDColors[0];
+                    yield return new WaitForSeconds(4.75f); //3rd flash
+                    if (inSubmissionMode) {
+                        if (numberOfDirections != 2) {
+                            Debug.LogFormat("[Outrageous #{0}] You didn't press the 2nd direction in time, strike! Generating new puzzle...", moduleId);
+                            GiveStrike();
+                        } else {
+                            correctDirection = UnityEngine.Random.Range(0, 4) + 1;
+                            LEDObject.GetComponent<MeshRenderer>().material = LEDColors[correctDirection];
+                            Debug.LogFormat("[Outrageous #{0}] The color for the 3rd flash is {1}", moduleId, loggingColors[correctDirection - 1]);
+                        }
+                        yield return new WaitForSeconds(0.25f);
+                        LEDObject.GetComponent<MeshRenderer>().material = LEDColors[0];
+                        yield return new WaitForSeconds(4.75f);
+                        if (inSubmissionMode) {
+                            Debug.LogFormat("[Outrageous #{0}] You didn't press the 3rd direction in time, strike! Generating new puzzle...", moduleId);
+                            GiveStrike();
+                        }
+                    }
+                }
             }
-            yield return new WaitForSeconds(0.25f);
-            LEDObject.GetComponent<MeshRenderer>().material = LEDColors[0];
-            yield return new WaitForSeconds(4.75f); //3rd flash
-            if (numberOfDirections != 2) {
-                GetComponent<KMBombModule>().HandleStrike();
-                inSubmissionMode = false;
-                DefaultMode.SetActive(true);
-                SubmissionMode.SetActive(false);
-                Debug.LogFormat("[Outrageous #{0}] You didn't press the 2nd direction in time, strike! Generating new puzzle...", moduleId);
-                //GeneratePuzzle();
-            } else {
-                correctDirection = UnityEngine.Random.Range(0, 4) + 1;
-                LEDObject.GetComponent<MeshRenderer>().material = LEDColors[correctDirection];
-                Debug.LogFormat("[Outrageous #{0}] The color for the 3rd flash is {1}", moduleId, loggingColors[correctDirection - 1]);
-            }
-            yield return new WaitForSeconds(0.25f);
-            LEDObject.GetComponent<MeshRenderer>().material = LEDColors[0];
-            yield return new WaitForSeconds(4.75f);
-            GetComponent<KMBombModule>().HandleStrike();
-            inSubmissionMode = false;
-            DefaultMode.SetActive(true);
-            SubmissionMode.SetActive(false);
-            Debug.LogFormat("[Outrageous #{0}] You didn't press the 3rd direction in time, strike! Generating new puzzle...", moduleId);
-            //GeneratePuzzle();
         }
     }
 
     void NumberPress(KMSelectable Number) {
+        GetComponent<KMAudio>().PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, transform);
         for (int i = 0; i < 9; i++) {
             if (Number == Numbers[i]) {
                 if (answerCode[numberOfDigits].ToString() == base36[i + 1].ToString() && stringFormats[arrows.IndexOf(orientations[chosenOrientation])][numberOfInputs].ToString() == "n".ToString()) {
@@ -279,20 +293,18 @@ public class outrageousScript : MonoBehaviour {
                         SubmissionMode.SetActive(false);
                         LEDObject.SetActive(false);
                         Debug.LogFormat("[Outrageous #{0}] Submitted all correct inputs, module solved.", moduleId);
+                        inSubmissionMode = false;
                     }
                 } else {
-                    GetComponent<KMBombModule>().HandleStrike();
-                    inSubmissionMode = false;
-                    DefaultMode.SetActive(true);
-                    SubmissionMode.SetActive(false);
                     Debug.LogFormat("[Outrageous #{0}] You pressed wrong number ({1}), strike! Generating new puzzle...", moduleId, i+1);
-                    //GeneratePuzzle();
+                    GiveStrike();
                 }
             }
         }
     }
 
     void DirectionPress(KMSelectable Direction) {
+        GetComponent<KMAudio>().PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, transform);
         for (int i = 0; i < 4; i++) {
             if (Direction == Directions[i]) {
                 if (i == correctDirection - 1 && stringFormats[arrows.IndexOf(orientations[chosenOrientation])][numberOfInputs].ToString() == "D".ToString()) {
@@ -305,14 +317,11 @@ public class outrageousScript : MonoBehaviour {
                         SubmissionMode.SetActive(false);
                         LEDObject.SetActive(false);
                         Debug.LogFormat("[Outrageous #{0}] Submitted all correct inputs, module solved.", moduleId);
+                        inSubmissionMode = false;
                     }
                 } else {
-                    GetComponent<KMBombModule>().HandleStrike();
-                    inSubmissionMode = false;
-                    DefaultMode.SetActive(true);
-                    SubmissionMode.SetActive(false);
                     Debug.LogFormat("[Outrageous #{0}] You pressed the wrong direction ({1}), strike! Generating new puzzle...", moduleId, directionNames[i]);
-                    //GeneratePuzzle();
+                    GiveStrike();
                 }
             }
         }
