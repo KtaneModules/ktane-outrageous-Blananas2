@@ -15,7 +15,7 @@ MonoBehaviour:
   title: Outrageous
   author: Blananas2
   description: "I don\u2019t think words can explain what the hell happened at the
-    factory."
+    factory.\n\nModule ID: outrageous\nThe manual can be found here: https://ktane.timwi.de/HTML/Outrageous.html"
   version: 
   outputFolder: build
-  previewImage: {fileID: 0}
+  previewImage: {fileID: 2800000, guid: f3b95da2d437c3745b3e55b4989e91b5, type: 3}

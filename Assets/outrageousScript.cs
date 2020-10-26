@@ -70,6 +70,7 @@ public class outrageousScript : MonoBehaviour {
     private List<string> loggingColors = new List<string> { "red, so press up.", "green, so press left.", "white, so press down.", "blue, so press right." };
     private bool inSubmissionMode = false;
     private List<string> directionNames = new List<string> { "up", "left", "down", "right" };
+    private List<string> soundNames = new List<string> { "Red", "Green", "White", "Blue" };
 
     void Awake () {
         moduleId = moduleIdCounter++;
@@ -243,6 +244,7 @@ public class outrageousScript : MonoBehaviour {
                 correctDirection = UnityEngine.Random.Range(0, 4) + 1;
                 LEDObject.GetComponent<MeshRenderer>().material = LEDColors[correctDirection];
                 Debug.LogFormat("[Outrageous #{0}] The color for the 1st flash is {1}", moduleId, loggingColors[correctDirection - 1]);
+                Audio.PlaySoundAtTransform(soundNames[correctDirection-1], transform);
                 yield return new WaitForSeconds(0.25f);
                 LEDObject.GetComponent<MeshRenderer>().material = LEDColors[0];
                 yield return new WaitForSeconds(4.75f); //2nd flash
@@ -254,6 +256,7 @@ public class outrageousScript : MonoBehaviour {
                         correctDirection = UnityEngine.Random.Range(0, 4) + 1;
                         LEDObject.GetComponent<MeshRenderer>().material = LEDColors[correctDirection];
                         Debug.LogFormat("[Outrageous #{0}] The color for the 2nd flash is {1}", moduleId, loggingColors[correctDirection - 1]);
+                        Audio.PlaySoundAtTransform(soundNames[correctDirection-1], transform);
                     }
                     yield return new WaitForSeconds(0.25f);
                     LEDObject.GetComponent<MeshRenderer>().material = LEDColors[0];
@@ -266,6 +269,7 @@ public class outrageousScript : MonoBehaviour {
                             correctDirection = UnityEngine.Random.Range(0, 4) + 1;
                             LEDObject.GetComponent<MeshRenderer>().material = LEDColors[correctDirection];
                             Debug.LogFormat("[Outrageous #{0}] The color for the 3rd flash is {1}", moduleId, loggingColors[correctDirection - 1]);
+                            Audio.PlaySoundAtTransform(soundNames[correctDirection-1], transform);
                         }
                         yield return new WaitForSeconds(0.25f);
                         LEDObject.GetComponent<MeshRenderer>().material = LEDColors[0];
@@ -294,6 +298,7 @@ public class outrageousScript : MonoBehaviour {
                         LEDObject.SetActive(false);
                         Debug.LogFormat("[Outrageous #{0}] Submitted all correct inputs, module solved.", moduleId);
                         inSubmissionMode = false;
+                        Audio.PlaySoundAtTransform("GG", transform);
                     }
                 } else {
                     Debug.LogFormat("[Outrageous #{0}] You pressed wrong number ({1}), strike! Generating new puzzle...", moduleId, i+1);
@@ -318,6 +323,7 @@ public class outrageousScript : MonoBehaviour {
                         LEDObject.SetActive(false);
                         Debug.LogFormat("[Outrageous #{0}] Submitted all correct inputs, module solved.", moduleId);
                         inSubmissionMode = false;
+                        Audio.PlaySoundAtTransform("GG", transform);
                     }
                 } else {
                     Debug.LogFormat("[Outrageous #{0}] You pressed the wrong direction ({1}), strike! Generating new puzzle...", moduleId, directionNames[i]);
