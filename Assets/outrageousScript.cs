@@ -71,6 +71,11 @@ public class outrageousScript : MonoBehaviour {
     private bool inSubmissionMode = false;
     private List<string> directionNames = new List<string> { "up", "left", "down", "right" };
     private List<string> soundNames = new List<string> { "Red", "Green", "White", "Blue" };
+	
+	#pragma warning disable 0649
+    private bool TwitchPlaysActive;
+    #pragma warning restore 0649
+	float waitTime = 0f;
 
     void Awake () {
         moduleId = moduleIdCounter++;
@@ -89,7 +94,14 @@ public class outrageousScript : MonoBehaviour {
             Symbol.OnHighlight += delegate { Hover(Symbol); return; };
             Symbol.OnHighlightEnded += delegate { HoverEnded(); return; };
         }
+		
+		 GetComponent<KMBombModule>().OnActivate += OutrageousInTP;
     }
+	
+	void OutrageousInTP()
+	{
+		waitTime = TwitchPlaysActive ? 9.75f : 4.75f;
+	}
 
     // Use this for initialization
     void Start () {
@@ -247,7 +259,7 @@ public class outrageousScript : MonoBehaviour {
                 Audio.PlaySoundAtTransform(soundNames[correctDirection-1], transform);
                 yield return new WaitForSeconds(0.25f);
                 LEDObject.GetComponent<MeshRenderer>().material = LEDColors[0];
-                yield return new WaitForSeconds(4.75f); //2nd flash
+                yield return new WaitForSeconds(waitTime != 0f ? waitTime : 4.75f); //2nd flash
                 if (inSubmissionMode) {
                     if (numberOfDirections != 1) {
                         Debug.LogFormat("[Outrageous #{0}] You didn't press the 1st direction in time, strike! Generating new puzzle...", moduleId);
@@ -260,7 +272,7 @@ public class outrageousScript : MonoBehaviour {
                     }
                     yield return new WaitForSeconds(0.25f);
                     LEDObject.GetComponent<MeshRenderer>().material = LEDColors[0];
-                    yield return new WaitForSeconds(4.75f); //3rd flash
+                    yield return new WaitForSeconds(waitTime != 0f ? waitTime : 4.75f); //3rd flash
                     if (inSubmissionMode) {
                         if (numberOfDirections != 2) {
                             Debug.LogFormat("[Outrageous #{0}] You didn't press the 2nd direction in time, strike! Generating new puzzle...", moduleId);
@@ -273,7 +285,7 @@ public class outrageousScript : MonoBehaviour {
                         }
                         yield return new WaitForSeconds(0.25f);
                         LEDObject.GetComponent<MeshRenderer>().material = LEDColors[0];
-                        yield return new WaitForSeconds(4.75f);
+                        yield return new WaitForSeconds(waitTime != 0f ? waitTime : 4.75f);
                         if (inSubmissionMode) {
                             Debug.LogFormat("[Outrageous #{0}] You didn't press the 3rd direction in time, strike! Generating new puzzle...", moduleId);
                             GiveStrike();
@@ -332,4 +344,121 @@ public class outrageousScript : MonoBehaviour {
             }
         }
     }
+	
+	//twitch plays
+    #pragma warning disable 414
+    private readonly string TwitchHelpMessage = @"Use the command !{0} cycle [row/column] [1-6] to cycle the symbols to a given row/column | Use the command !{0} start to start the submission | Use the command !{0} press [1-9/uldr] to press the corresponding buttons during submission (You can perform the command in a chain)";
+    #pragma warning restore 414
+	
+	string[] ValidArrows = {"u", "l", "d", "r"};
+	
+	IEnumerator ProcessTwitchCommand(string command)
+    {
+		string[] parameters = command.Split(' ');
+		if (Regex.IsMatch(parameters[0], @"^\s*cycle\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+        {
+			yield return null;
+			if (parameters.Length != 3)
+			{
+				yield return "sendtochaterror Invalid parameter length. The command was not processed.";
+				yield break;
+			}
+			
+			if (inSubmissionMode)
+			{
+				yield return "sendtochaterror You are currently in submission mode. The command was not processed.";
+				yield break;
+			}
+			
+			if (parameters[1].ToLowerInvariant() != "row" && parameters[1].ToLowerInvariant() != "column")
+			{
+				yield return "sendtochaterror Unable to determine if you want to cycle by row or column. The command was not processed.";
+				yield break;
+			}
+			
+			int Out;
+			if (!Int32.TryParse(parameters[2], out Out))
+			{
+				yield return "sendtochaterror Number gathered was invalid. The command was not processed.";
+				yield break;
+			}
+			
+			if (Out < 1 || Out > 6)
+			{
+				yield return "sendtochaterror Number is not between 1-6. The command was not processed.";
+				yield break;
+			}
+			
+			for (int x = 0; x < 6; x++)
+			{
+				switch (parameters[1].ToLowerInvariant())
+				{
+					case "row":
+						Symbols[((Out - 1)*6) + x].OnHighlight();
+						yield return new WaitForSeconds(1.5f);
+						Symbols[((Out - 1)*6) + x].OnHighlightEnded();
+						break;
+					case "column":
+						Symbols[(x*6) + (Out - 1)].OnHighlight();
+						yield return new WaitForSeconds(1.5f);
+						Symbols[(x*6) + (Out - 1)].OnHighlightEnded();
+						break;
+					default:
+						break;
+				}
+			}
+		}
+		
+		if (Regex.IsMatch(command, @"^\s*start\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+        {
+			yield return null;
+			if (inSubmissionMode)
+			{
+				yield return "sendtochaterror You are currently in submission mode. The command was not processed.";
+				yield break;
+			}
+			StartButton.OnInteract();
+		}
+		
+		if (Regex.IsMatch(parameters[0], @"^\s*press\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+        {
+			yield return null;
+			if (parameters.Length != 2)
+			{
+				yield return "sendtochaterror Invalid parameter length. The command was not processed.";
+				yield break;
+			}
+			
+			if (!inSubmissionMode)
+			{
+				yield return "sendtochaterror You are currently not in submission mode. The command was not processed.";
+				yield break;
+			}
+			
+			for (int x = 0; x < parameters[1].Length; x++)
+			{
+				int Out;
+				if (Int32.TryParse(parameters[1][x].ToString(), out Out))
+				{
+					if (Out < 1)
+					{
+						yield return "sendtochaterror Stopped on Step " + (x + 1).ToString() + " since current number is less than 1.";
+						yield break;
+					}
+					Numbers[Out - 1].OnInteract();
+				}
+				
+				else
+				{
+					if (new[] {parameters[1][x].ToString().ToLowerInvariant()}.Any(c => !ValidArrows.Contains(c)))
+					{
+						yield return "sendtochaterror Stopped on Step " + (x + 1).ToString() + " since current direction is not valid.";
+						yield break;
+					}
+					Directions[Array.IndexOf(ValidArrows, parameters[1][x].ToString().ToLowerInvariant())].OnInteract();
+				}
+				yield return new WaitForSeconds(0.1f);
+			}
+		}
+	}
 }
