@@ -71,11 +71,13 @@ public class outrageousScript : MonoBehaviour {
     private bool inSubmissionMode = false;
     private List<string> directionNames = new List<string> { "up", "left", "down", "right" };
     private List<string> soundNames = new List<string> { "Red", "Green", "White", "Blue" };
+    private string answerFormat;
 	
 	#pragma warning disable 0649
-    private bool TwitchPlaysActive;
+    private bool TwitchPlaysActive; 
+    private IDictionary<string, object> tpAPI;
     #pragma warning restore 0649
-	float waitTime = 0f;
+    float waitTime = 0f;
 
     void Awake () {
         moduleId = moduleIdCounter++;
@@ -100,7 +102,16 @@ public class outrageousScript : MonoBehaviour {
 	
 	void OutrageousInTP()
 	{
-		waitTime = TwitchPlaysActive ? 9.75f : 4.75f;
+        if (TwitchPlaysActive)
+        {
+            waitTime = 9.75f;
+            GameObject tpAPIGameObject = GameObject.Find("TwitchPlays_Info");
+            //To make the module can be tested in test harness, check if the gameObject exists.
+            if (tpAPIGameObject != null)
+                tpAPI = tpAPIGameObject.GetComponent<IDictionary<string, object>>();
+            else
+                TwitchPlaysActive = false;
+        }
 	}
 
     // Use this for initialization
@@ -212,7 +223,8 @@ public class outrageousScript : MonoBehaviour {
 
         Debug.LogFormat("[Outrageous #{0}] The input numbers: {1}", moduleId, answerCode);
 
-        Debug.LogFormat("[Outrageous #{0}] Format on input sequence: {1}", moduleId, stringFormats[arrows.IndexOf(orientations[chosenOrientation])]);
+        answerFormat = stringFormats[arrows.IndexOf(orientations[chosenOrientation])];
+        Debug.LogFormat("[Outrageous #{0}] Format on input sequence: {1}", moduleId, answerFormat);
     }
 
     void Hover (KMSelectable Symbol) {
@@ -255,6 +267,8 @@ public class outrageousScript : MonoBehaviour {
             if (inSubmissionMode) {
                 correctDirection = UnityEngine.Random.Range(0, 4) + 1;
                 LEDObject.GetComponent<MeshRenderer>().material = LEDColors[correctDirection];
+                if (TwitchPlaysActive)
+                    tpAPI["ircConnectionSendMessage"] = "The LED flashed " + loggingColors[correctDirection - 1] + "!";
                 Debug.LogFormat("[Outrageous #{0}] The color for the 1st flash is {1}", moduleId, loggingColors[correctDirection - 1]);
                 Audio.PlaySoundAtTransform(soundNames[correctDirection-1], transform);
                 yield return new WaitForSeconds(0.25f);
@@ -267,6 +281,8 @@ public class outrageousScript : MonoBehaviour {
                     } else {
                         correctDirection = UnityEngine.Random.Range(0, 4) + 1;
                         LEDObject.GetComponent<MeshRenderer>().material = LEDColors[correctDirection];
+                        if (TwitchPlaysActive)
+                            tpAPI["ircConnectionSendMessage"] = "The LED flashed " + loggingColors[correctDirection - 1] + "!";
                         Debug.LogFormat("[Outrageous #{0}] The color for the 2nd flash is {1}", moduleId, loggingColors[correctDirection - 1]);
                         Audio.PlaySoundAtTransform(soundNames[correctDirection-1], transform);
                     }
@@ -280,6 +296,8 @@ public class outrageousScript : MonoBehaviour {
                         } else {
                             correctDirection = UnityEngine.Random.Range(0, 4) + 1;
                             LEDObject.GetComponent<MeshRenderer>().material = LEDColors[correctDirection];
+                            if (TwitchPlaysActive)
+                                tpAPI["ircConnectionSendMessage"] = "The LED flashed " + loggingColors[correctDirection - 1] + "!";
                             Debug.LogFormat("[Outrageous #{0}] The color for the 3rd flash is {1}", moduleId, loggingColors[correctDirection - 1]);
                             Audio.PlaySoundAtTransform(soundNames[correctDirection-1], transform);
                         }
@@ -300,10 +318,10 @@ public class outrageousScript : MonoBehaviour {
         GetComponent<KMAudio>().PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, transform);
         for (int i = 0; i < 9; i++) {
             if (Number == Numbers[i]) {
-                if (answerCode[numberOfDigits].ToString() == base36[i + 1].ToString() && stringFormats[arrows.IndexOf(orientations[chosenOrientation])][numberOfInputs].ToString() == "n".ToString()) {
+                if (answerCode[numberOfDigits].ToString() == base36[i + 1].ToString() && answerFormat[numberOfInputs] == 'n') {
                     Debug.LogFormat("[Outrageous #{0}] You pressed {1}, that is correct.", moduleId, i+1);
-                    numberOfDigits = numberOfDigits + 1;
-                    numberOfInputs = numberOfInputs + 1;
+                    numberOfDigits++;
+                    numberOfInputs++;
                     if (numberOfInputs == 9) {
                         GetComponent<KMBombModule>().HandlePass();
                         SubmissionMode.SetActive(false);
@@ -324,7 +342,7 @@ public class outrageousScript : MonoBehaviour {
         GetComponent<KMAudio>().PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, transform);
         for (int i = 0; i < 4; i++) {
             if (Direction == Directions[i]) {
-                if (i == correctDirection - 1 && stringFormats[arrows.IndexOf(orientations[chosenOrientation])][numberOfInputs].ToString() == "D".ToString()) {
+                if (i == correctDirection - 1 && answerFormat[numberOfInputs] == 'D') {
                     Debug.LogFormat("[Outrageous #{0}] You pressed {1}, that is correct.", moduleId, directionNames[i]);
                     correctDirection = 0;
                     numberOfDirections = numberOfDirections + 1;
@@ -347,118 +365,62 @@ public class outrageousScript : MonoBehaviour {
 	
 	//twitch plays
     #pragma warning disable 414
-    private readonly string TwitchHelpMessage = @"Use the command !{0} cycle [row/column] [1-6] to cycle the symbols to a given row/column | Use the command !{0} start to start the submission | Use the command !{0} press [1-9/uldr] to press the corresponding buttons during submission (You can perform the command in a chain)";
+    private readonly string TwitchHelpMessage = @"Use <!{0} highlight A1 B2 C3 D4> to hover over the creatures in those positions. Use <!{0} start> to press the start button. Use <!{0} press 123UDR456> to press those buttons. LED changes will be announced in chat.";
     #pragma warning restore 414
-	
-	string[] ValidArrows = {"u", "l", "d", "r"};
-	
+	IEnumerator Press(KMSelectable btn, float delay)
+    {
+        btn.OnInteract();
+        yield return new WaitForSeconds(delay);
+    }
 	IEnumerator ProcessTwitchCommand(string command)
     {
-		string[] parameters = command.Split(' ');
-		if (Regex.IsMatch(parameters[0], @"^\s*cycle\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+        command = command.Trim().ToUpperInvariant();
+        Match mCyc = Regex.Match(command, @"^(?:CYCLE|HIGHLIGHT)((?:\s+[A-F][1-6])+)$");
+        Match mSub = Regex.Match(command, @"^(?:PRESS|SUBMIT)((?:\s*[1-9ULDR])+)$");
+        if (mCyc.Success && DefaultMode.activeSelf)
         {
-			yield return null;
-			if (parameters.Length != 3)
-			{
-				yield return "sendtochaterror Invalid parameter length. The command was not processed.";
-				yield break;
-			}
-			
-			if (inSubmissionMode)
-			{
-				yield return "sendtochaterror You are currently in submission mode. The command was not processed.";
-				yield break;
-			}
-			
-			if (parameters[1].ToLowerInvariant() != "row" && parameters[1].ToLowerInvariant() != "column")
-			{
-				yield return "sendtochaterror Unable to determine if you want to cycle by row or column. The command was not processed.";
-				yield break;
-			}
-			
-			int Out;
-			if (!Int32.TryParse(parameters[2], out Out))
-			{
-				yield return "sendtochaterror Number gathered was invalid. The command was not processed.";
-				yield break;
-			}
-			
-			if (Out < 1 || Out > 6)
-			{
-				yield return "sendtochaterror Number is not between 1-6. The command was not processed.";
-				yield break;
-			}
-			
-			for (int x = 0; x < 6; x++)
-			{
-				switch (parameters[1].ToLowerInvariant())
-				{
-					case "row":
-						Symbols[((Out - 1)*6) + x].OnHighlight();
-						yield return new WaitForSeconds(1.5f);
-						Symbols[((Out - 1)*6) + x].OnHighlightEnded();
-						break;
-					case "column":
-						Symbols[(x*6) + (Out - 1)].OnHighlight();
-						yield return new WaitForSeconds(1.5f);
-						Symbols[(x*6) + (Out - 1)].OnHighlightEnded();
-						break;
-					default:
-						break;
-				}
-			}
-		}
-		
-		if (Regex.IsMatch(command, @"^\s*start\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+            yield return null;
+            foreach (string coord in mCyc.Groups[1].Value.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                Debug.Log(mCyc.Groups[1].Value.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).Join());
+                int pos = 6 * (coord[1] - '1') + (coord[0] - 'A');
+                Symbols[pos].OnHighlight();
+                yield return "trycancel";
+                yield return new WaitForSeconds(1.5f);
+                Symbols[pos].OnHighlightEnded();
+            }
+        }
+        else if (command == "START" && DefaultMode.activeSelf)
         {
-			yield return null;
-			if (inSubmissionMode)
-			{
-				yield return "sendtochaterror You are currently in submission mode. The command was not processed.";
-				yield break;
-			}
-			StartButton.OnInteract();
-		}
-		
-		if (Regex.IsMatch(parameters[0], @"^\s*press\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+            yield return null;
+            yield return Press(StartButton, 0.1f);
+        }
+        else if (mSub.Success && SubmissionMode.activeSelf)
         {
-			yield return null;
-			if (parameters.Length != 2)
-			{
-				yield return "sendtochaterror Invalid parameter length. The command was not processed.";
-				yield break;
-			}
-			
-			if (!inSubmissionMode)
-			{
-				yield return "sendtochaterror You are currently not in submission mode. The command was not processed.";
-				yield break;
-			}
-			
-			for (int x = 0; x < parameters[1].Length; x++)
-			{
-				int Out;
-				if (Int32.TryParse(parameters[1][x].ToString(), out Out))
-				{
-					if (Out < 1)
-					{
-						yield return "sendtochaterror Stopped on Step " + (x + 1).ToString() + " since current number is less than 1.";
-						yield break;
-					}
-					Numbers[Out - 1].OnInteract();
-				}
-				
-				else
-				{
-					if (new[] {parameters[1][x].ToString().ToLowerInvariant()}.Any(c => !ValidArrows.Contains(c)))
-					{
-						yield return "sendtochaterror Stopped on Step " + (x + 1).ToString() + " since current direction is not valid.";
-						yield break;
-					}
-					Directions[Array.IndexOf(ValidArrows, parameters[1][x].ToString().ToLowerInvariant())].OnInteract();
-				}
-				yield return new WaitForSeconds(0.1f);
-			}
-		}
+            yield return null;
+            foreach (char btn in mSub.Groups[1].Value.Where(x => !char.IsWhiteSpace(x)))
+            {
+                if ("ULDR".Contains(btn))
+                    yield return Press(Directions["ULDR".IndexOf(btn)], 0.1f);
+                else yield return Press(Numbers[btn - '1'], 0.1f);
+            }
+        }
 	}
+    IEnumerator TwitchHandleForcedSolve()
+    {
+        if (DefaultMode.activeSelf)
+            yield return Press(StartButton, 0.1f);
+        for (int i = numberOfInputs; i < 9; i++)
+        {
+            if (answerFormat[i] == 'n')
+                yield return Press(Numbers[answerCode[numberOfDigits] - '1'], 0.1f);
+            else
+            {
+                yield return new WaitWhile(() => LEDObject.GetComponent<MeshRenderer>().material.name.StartsWith("black"));
+                yield return new WaitForSeconds(0.1f);
+                yield return Press(Directions[correctDirection - 1], 0.1f);
+                yield return new WaitUntil(() => LEDObject.GetComponent<MeshRenderer>().material.name.StartsWith("black"));
+            }
+        }
+    }
 }
