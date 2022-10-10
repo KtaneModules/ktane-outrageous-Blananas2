@@ -1753,7 +1753,7 @@ GameObject:
   - component: {fileID: 114139553842080666}
   - component: {fileID: 114723933296877830}
   m_Layer: 0
-  m_Name: Template
+  m_Name: Outrageous
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -9125,7 +9125,7 @@ MonoBehaviour:
   - {fileID: 114289113448905474}
   - {fileID: 114208425114083082}
   IsPassThrough: 0
-  ChildRowLength: 0
+  ChildRowLength: 1
   Highlight: {fileID: 114570430299588062}
   SelectableColliders: []
   DefaultSelectableIndex: 0
