@@ -79,8 +79,20 @@ public class outrageousScript : MonoBehaviour {
     #pragma warning restore 0649
     float waitTime = 0f;
 
+    private OutrageousSettings Settings = new OutrageousSettings();
+    bool resetsOnStrike = true;
+
     void Awake () {
         moduleId = moduleIdCounter++;
+
+        ModConfig<OutrageousSettings> modConfig = new ModConfig<OutrageousSettings>("OutrageousSettings");
+        //Read from the settings file, or create one if one doesn't exist
+        Settings = modConfig.Settings;
+        //Update the settings file incase there was an error during read
+        modConfig.Settings = Settings;
+
+        resetsOnStrike = Settings.Resets;
+        Debug.LogFormat("<Outrageous #{0}> Number of stages: {1}", moduleId, resetsOnStrike);
 
         StartButton.OnInteract += delegate () { PressStart(); return false; };
 
@@ -258,7 +270,9 @@ public class outrageousScript : MonoBehaviour {
         inSubmissionMode = false;
         DefaultMode.SetActive(true);
         SubmissionMode.SetActive(false);
-        GeneratePuzzle();
+        if (resetsOnStrike) {
+            GeneratePuzzle();
+        }
     }
 
     private IEnumerator Submission() {
@@ -372,6 +386,7 @@ public class outrageousScript : MonoBehaviour {
         btn.OnInteract();
         yield return new WaitForSeconds(delay);
     }
+
 	IEnumerator ProcessTwitchCommand(string command)
     {
         command = command.Trim().ToUpperInvariant();
@@ -406,6 +421,7 @@ public class outrageousScript : MonoBehaviour {
             }
         }
 	}
+
     IEnumerator TwitchHandleForcedSolve()
     {
         if (DefaultMode.activeSelf)
@@ -423,4 +439,25 @@ public class outrageousScript : MonoBehaviour {
             }
         }
     }
+
+    class OutrageousSettings
+    {
+        public bool Resets = true;
+    }
+
+    static Dictionary<string, object>[] TweaksEditorSettings = new Dictionary<string, object>[]
+    {
+        new Dictionary<string, object>
+        {
+            { "Filename", "OutrageousSettings.json" },
+            { "Name", "Outrageous Settings" },
+            { "Listing", new List<Dictionary<string, object>>{
+                new Dictionary<string, object>
+                {
+                    { "Key", "Resets" },
+                    { "Text", "Whether or not the module resets on a strike." }
+                }
+            } }
+        }
+    };
 }
