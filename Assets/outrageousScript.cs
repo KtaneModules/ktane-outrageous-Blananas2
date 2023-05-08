@@ -282,7 +282,7 @@ public class outrageousScript : MonoBehaviour {
                 correctDirection = UnityEngine.Random.Range(0, 4) + 1;
                 LEDObject.GetComponent<MeshRenderer>().material = LEDColors[correctDirection];
                 if (TwitchPlaysActive)
-                    tpAPI["ircConnectionSendMessage"] = "The LED flashed " + loggingColors[correctDirection - 1] + "!";
+                    tpAPI["ircConnectionSendMessage"] = "The LED flashed " + soundNames[correctDirection - 1] + "!";
                 Debug.LogFormat("[Outrageous #{0}] The color for the 1st flash is {1}", moduleId, loggingColors[correctDirection - 1]);
                 Audio.PlaySoundAtTransform(soundNames[correctDirection-1], transform);
                 yield return new WaitForSeconds(0.25f);
@@ -296,7 +296,7 @@ public class outrageousScript : MonoBehaviour {
                         correctDirection = UnityEngine.Random.Range(0, 4) + 1;
                         LEDObject.GetComponent<MeshRenderer>().material = LEDColors[correctDirection];
                         if (TwitchPlaysActive)
-                            tpAPI["ircConnectionSendMessage"] = "The LED flashed " + loggingColors[correctDirection - 1] + "!";
+                            tpAPI["ircConnectionSendMessage"] = "The LED flashed " + soundNames[correctDirection - 1] + "!";
                         Debug.LogFormat("[Outrageous #{0}] The color for the 2nd flash is {1}", moduleId, loggingColors[correctDirection - 1]);
                         Audio.PlaySoundAtTransform(soundNames[correctDirection-1], transform);
                     }
@@ -311,7 +311,7 @@ public class outrageousScript : MonoBehaviour {
                             correctDirection = UnityEngine.Random.Range(0, 4) + 1;
                             LEDObject.GetComponent<MeshRenderer>().material = LEDColors[correctDirection];
                             if (TwitchPlaysActive)
-                                tpAPI["ircConnectionSendMessage"] = "The LED flashed " + loggingColors[correctDirection - 1] + "!";
+                                tpAPI["ircConnectionSendMessage"] = "The LED flashed " + soundNames[correctDirection - 1] + "!";
                             Debug.LogFormat("[Outrageous #{0}] The color for the 3rd flash is {1}", moduleId, loggingColors[correctDirection - 1]);
                             Audio.PlaySoundAtTransform(soundNames[correctDirection-1], transform);
                         }
