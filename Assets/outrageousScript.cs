@@ -92,7 +92,7 @@ public class outrageousScript : MonoBehaviour {
         modConfig.Settings = Settings;
 
         resetsOnStrike = Settings.Resets;
-        Debug.LogFormat("<Outrageous #{0}> Number of stages: {1}", moduleId, resetsOnStrike);
+        Debug.LogFormat("<Outrageous #{0}> Resets on strike: {1}", moduleId, resetsOnStrike ? "Enabled" : "Disabled");
 
         StartButton.OnInteract += delegate () { PressStart(); return false; };
 
